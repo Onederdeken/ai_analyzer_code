@@ -16,8 +16,8 @@ builder.Services.AddScoped<IAiPromptBuilder, AiPromptBuilder>();
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
-    serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(20);
-    serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(20);
+    serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(30);
+    serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(30);
 });
 
 builder.Services.Configure<HostOptions>(opts =>
