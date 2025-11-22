@@ -65,6 +65,52 @@ namespace frontAIagent
                 throw;
             }
         }
+        public async Task<string> GenerateDocumentationFileAsync(string prompt)
+        {
+            var requestBody = new
+            {
+                model = "gpt-4.1",
+                input = prompt,
+                response = new
+                {
+                    format = new
+                    {
+                        type = "output_file",
+                        file_suffix = ".md"
+                    }
+                }
+            };
+
+            var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                "https://api.openai.com/v1/responses"
+            );
+
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {_apiKey}");
+            request.Content = new StringContent(
+                JsonSerializer.Serialize(requestBody),
+                Encoding.UTF8,
+                "application/json"
+            );
+
+            var response = await _httpClient.SendAsync(request);
+            var json = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+                throw new Exception(json);
+
+            var doc = JsonDocument.Parse(json);
+
+            var fileId = doc.RootElement
+                .GetProperty("output")[0]
+                .GetProperty("file_id")
+                .GetString();
+
+            if (fileId == null)
+                throw new Exception("AI returned no file_id.");
+
+            return fileId!;
+        }
     }
 
 

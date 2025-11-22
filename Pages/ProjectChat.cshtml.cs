@@ -3,6 +3,7 @@ using frontAIagent.Promt;
 using frontAIagent.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -128,7 +129,7 @@ namespace frontAIagent.Pages
                 var fullPrompt = await _promptBuilder.BuildPromptDocumentationAsync(Project, userMessage, FileContext, ProjectStructure, personaHint: "Представь, что ты senior Python dev...", filteredLogText);
 
                 // Отправляем в OpenAI
-                var gptResponse = await _aiClient.SendPromptAsync(fullPrompt);
+                var gptResponse = await _aiClient.GenerateDocumentationFileAsync(fullPrompt);
 
                 ChatMessages.Add(new ChatMessage
                 {
@@ -137,13 +138,28 @@ namespace frontAIagent.Pages
                     Timestamp = DateTime.Now
                 });
 
-                return Page();
+                return await DownloadFileAsync(fileId);
+
             }
             catch (Exception ex)
             {
                 ErrorMessage = ex.Message;
                 return Page();
             }
+        }
+        public async Task<byte[]> DownloadFileAsync(string fileId)
+        {
+            var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"https://api.openai.com/v1/files/{fileId}/content"
+            );
+
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {_apiKey}");
+
+            var resp = await _httpClient.SendAsync(request);
+            resp.EnsureSuccessStatusCode();
+
+            return await resp.Content.ReadAsByteArrayAsync();
         }
         public async Task<IActionResult> OnPostAskGptAsync(int projectId, string userMessage)
         {

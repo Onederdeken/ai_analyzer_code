@@ -140,7 +140,10 @@ namespace frontAIagent.Promt
     string userMessage,
     FileReadResult fileContext,
     string projectStructure,
-    string personaHint = "Представь, что ты тимлид / системный архитектор уровня Senior+ с глубоким пониманием разработки и большим опытом документирования сложных систем.",
+    string personaHint =
+        "Представь, что ты Senior+ тимлид / системный архитектор, " +
+        "который отлично разбирается в разработке, умеет анализировать проекты " +
+        "и писать промышленную документацию enterprise-уровня.",
     string? logs = null
 )
         {
@@ -148,27 +151,29 @@ namespace frontAIagent.Promt
 
             sb.AppendLine(personaHint);
             sb.AppendLine();
-            sb.AppendLine("Твоя задача — составить **полноценную, структурированную, профессиональную документацию** по проекту.");
-            sb.AppendLine("Документация должна быть оформлена в стиле industrial-grade / enterprise уровня, так как её будут использовать новые разработчики, DevOps, аналитики и тимлиды.");
+            sb.AppendLine("Составь **полную структурированную документацию проекта**, включающую:");
+            sb.AppendLine("- описание назначения проекта;");
+            sb.AppendLine("- архитектуру и модули;");
+            sb.AppendLine("- анализ классов, файлов и функций;");
+            sb.AppendLine("- описание связей и зависимостей;");
+            sb.AppendLine("- системные требования;");
+            sb.AppendLine("- переменные окружения и конфигурации;");
+            sb.AppendLine("- особенности запуска локально и в проде;");
+            sb.AppendLine("- примеры использования API / CLI;");
+            sb.AppendLine("- возможные точки улучшения.");
             sb.AppendLine();
-            sb.AppendLine("### Требования:");
-            sb.AppendLine("- Общее описание проекта");
-            sb.AppendLine("- Архитектура (модули, связи, потоки данных)");
-            sb.AppendLine("- Разбор классов/функций/методов");
-            sb.AppendLine("- Зависимости");
-            sb.AppendLine("- Запуск проекта");
-            sb.AppendLine("- Переменные окружения");
-            sb.AppendLine("- Примеры использования");
-            sb.AppendLine("- Возможные улучшения документации");
-            sb.AppendLine();
-            sb.AppendLine("Оформление: Markdown, заголовки, списки, таблицы, кодовые блоки.");
+            sb.AppendLine("### Важно:");
+            sb.AppendLine("- Ответ должен быть **строго в виде одного файла Markdown**.");
+            sb.AppendLine("- Не пиши текст в chat-ответ, только содержимое файла.");
+            sb.AppendLine("- Имя файла: `documentation.md`.");
+            sb.AppendLine("- Формат: industrial-grade Markdown документация.");
             sb.AppendLine();
             sb.AppendLine("---");
             sb.AppendLine("## 📁 Структура проекта");
             sb.AppendLine(projectStructure);
             sb.AppendLine();
             sb.AppendLine("---");
-            sb.AppendLine("## 📦 Основные данные проекта");
+            sb.AppendLine("## 📦 Основная информация");
             sb.AppendLine($"**Project Name:** {project.AnalysisName}");
             sb.AppendLine($"**Directory:** {project.DirectoryPath}");
             sb.AppendLine($"**File Type:** {project.FileType}");
@@ -177,53 +182,30 @@ namespace frontAIagent.Promt
 
             if (!string.IsNullOrWhiteSpace(project.ProgramDescription))
             {
-                sb.AppendLine("## 📝 Описание проекта (из записи пользователя)");
+                sb.AppendLine("## 📝 Описание проекта");
                 sb.AppendLine(project.ProgramDescription);
-                sb.AppendLine();
                 sb.AppendLine("---");
             }
 
-            //
-            // SAFE FILE HANDLING BLOCK
-            //
             if (fileContext != null)
             {
-                sb.AppendLine("## 📚 Содержимое файлов проекта");
-
-                // 1) Попытка получить список файлов
                 var files = fileContext.GetType().GetProperty("ProcessedFiles")?.GetValue(fileContext) as IEnumerable<string>;
-                var fileContents = fileContext.GetType().GetProperty("FileContents")?.GetValue(fileContext);
+                var dict = fileContext.GetType().GetProperty("FileContents")?.GetValue(fileContext) as IDictionary<string, string>;
 
-                // dictionary<string,string> ?
-                var dict = fileContents as IDictionary<string, string>;
+                sb.AppendLine("## 📚 Файлы проекта");
 
                 if (files != null)
                 {
                     foreach (var file in files)
                     {
-                        sb.AppendLine();
                         sb.AppendLine($"### 📄 {file}");
                         sb.AppendLine("```");
-
-                        string content = "";
-
-                        // если есть словарь — используем его
-                        if (dict != null && dict.ContainsKey(file))
-                            content = dict[file];
-                        else
-                        {
-                            // иначе пробуем свойство Content
-                            var contentProp = fileContext.GetType().GetProperty("Content")?.GetValue(fileContext) as string;
-                            if (!string.IsNullOrEmpty(contentProp))
-                                content = contentProp;
-                        }
-
-                        sb.AppendLine(content ?? "");
+                        sb.AppendLine(dict != null && dict.ContainsKey(file) ? dict[file] : "");
                         sb.AppendLine("```");
+                        sb.AppendLine();
                     }
                 }
 
-                sb.AppendLine();
                 sb.AppendLine("---");
             }
 
@@ -238,16 +220,17 @@ namespace frontAIagent.Promt
 
             if (!string.IsNullOrWhiteSpace(userMessage))
             {
-                sb.AppendLine("## 🔧 Дополнительный запрос пользователя");
+                sb.AppendLine("## 🔧 Дополнительные указания");
                 sb.AppendLine(userMessage);
                 sb.AppendLine("---");
             }
 
             sb.AppendLine();
-            sb.AppendLine("Теперь составь **полную, развёрнутую, аккуратную документацию**.");
+            sb.AppendLine("Сгенерируй документ и верни его **как файл**.");
 
             return Task.FromResult(sb.ToString());
         }
+
 
 
         // --- Helpers ---
