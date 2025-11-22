@@ -137,6 +137,7 @@ namespace frontAIagent.Pages
             {
                 // Получаем список файлов
                 var files = GetFiles(Project.DirectoryPath, Project.FileType);
+                var logs = GetFiles(Project.LogPath, "*");
 
                 // Читаем и объединяем файлы
                 FileContext = await ReadAndCombineFilesAsync(files, Project.DirectoryPath);

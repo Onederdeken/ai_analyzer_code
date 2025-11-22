@@ -226,11 +226,11 @@
                 <div class="card shadow mt-4">
                     <div class="card-header bg-info text-white">
                         <h5 class="mb-0">
-                            <i class="bi bi-file-earmark-text"></i> Latest Analysis Result
+                            Latest Analysis Result
                         </h5>
                     </div>
-                    <div class="card-body">
-                        @Html.Raw(Model.AnalysisResult.Replace("<", "&lt;").Replace(">", "&gt;"))
+                    <div class="card-body analysis-result" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                        @Html.Raw(Markdig.Markdown.ToHtml(Model.AnalysisResult))
                     </div>
                 </div>
             }
@@ -265,6 +265,67 @@
     </script>
 
     <style>
+        .analysis-result h1,
+        .analysis-result h2,
+        .analysis-result h3 {
+            color: #2c3e50;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .analysis-result h1 {
+            font-size: 1.8rem;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 0.5rem;
+        }
+
+        .analysis-result h2 {
+            font-size: 1.5rem;
+            border-left: 4px solid #3498db;
+            padding-left: 1rem;
+        }
+
+        .analysis-result h3 {
+            font-size: 1.3rem;
+            color: #2980b9;
+        }
+
+        .analysis-result pre {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .analysis-result code {
+            background: #f8f9fa;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .analysis-result ul,
+        .analysis-result ol {
+            padding-left: 2rem;
+            margin: 1rem 0;
+        }
+
+        .analysis-result li {
+            margin-bottom: 0.5rem;
+            line-height: 1.5;
+        }
+
+        .analysis-result strong {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+
+        .analysis-result em {
+            color: #27ae60;
+            font-style: italic;
+        }
         .chat-messages {
             background-color: #f8f9fa;
         }
