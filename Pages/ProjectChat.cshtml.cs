@@ -54,7 +54,7 @@ namespace frontAIagent.Pages
             }
         }
 
-        public async Task<IActionResult> OnPostAsync(int projectId)
+        public async Task<IActionResult> OnPostProjectAsync(int projectId)
         {
             try
             {
@@ -76,7 +76,7 @@ namespace frontAIagent.Pages
             }
         }
 
-        public async Task<IActionResult> OnPostAskGptAsync(string userMessage)
+        public async Task<IActionResult> OnPostAskGptAsync(int projectId,string userMessage)
         {
             try
             {
@@ -96,7 +96,8 @@ namespace frontAIagent.Pages
                     IsUser = true,
                     Timestamp = DateTime.Now
                 });
-
+                var project = await _projectRepository.GetProjectByIdAsync(projectId);
+                Project = project;
                 // Просто отправляем сообщение в GPT
                 var gptResponse = await _aiClient.GetAiResponseAsync(userMessage);
 
@@ -118,6 +119,8 @@ namespace frontAIagent.Pages
             }
             catch (Exception ex)
             {
+                var project = await _projectRepository.GetProjectByIdAsync(projectId);
+                Project = project;
                 ErrorMessage = $"Error: {ex.Message}";
                 return Page();
             }

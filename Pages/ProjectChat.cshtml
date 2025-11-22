@@ -208,6 +208,7 @@
 
                     <!-- Форма ввода -->
                    <form method="post" asp-page-handler="AskGpt" id="chatForm">
+                        <input type="hidden" name="projectId" value="@Model.Project.Id" />
                         <div class="input-group">
                             <textarea class="form-control" name="userMessage" id="userMessage"
                                       rows="3" placeholder="Ask GPT anything..." required>@Model.UserMessage</textarea>

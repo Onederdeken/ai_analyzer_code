@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 namespace frontAIagent
 {
@@ -14,6 +15,9 @@ namespace frontAIagent
             _httpClient = httpClient;
             _httpClient.Timeout = TimeSpan.FromSeconds(300);
             _apiKey = aiSettings["OpenAiApiKey"];
+            Console.WriteLine(
+    string.Join(" ", _apiKey.Select(c => ((int)c).ToString()))
+);
         }
 
         public async Task<string> GetAiResponseAsync(string prompt, string model = "gpt-3.5-turbo", double temperature = 0.7, int maxTokens = 2000)
@@ -21,6 +25,10 @@ namespace frontAIagent
             try
             {
                 Console.WriteLine($"Sending AI request to {model}");
+
+                // 1. Проверка API KEY на ASCII
+                if (_apiKey.Any(c => c > 127))
+                    throw new Exception($"API KEY contains non-ASCII characters: {string.Join(" ", _apiKey.Select(c => (int)c))}");
 
                 var requestBody = new
                 {
@@ -34,56 +42,38 @@ namespace frontAIagent
                 };
 
                 var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/chat/completions");
-                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _apiKey);
-                request.Content = JsonContent.Create(requestBody);
+
+                request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {_apiKey}");
+
+                // ВАЖНО: добавляем JSON без BOM
+                request.Content = new StringContent(
+                    JsonSerializer.Serialize(requestBody),
+                    Encoding.UTF8,
+                    "application/json"
+                );
 
                 var response = await _httpClient.SendAsync(request);
                 var jsonString = await response.Content.ReadAsStringAsync();
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    // Детальный вывод ошибки
-                    var errorMessage = $"""
-            ❌ OPENAI API ERROR:
-            Status Code: {(int)response.StatusCode} {response.StatusCode}
-            Request URL: {request.RequestUri}
-            API Key: {_apiKey?.Substring(0, Math.Min(10, _apiKey?.Length ?? 0))}... (first 10 chars)
-            Model: {model}
-            
-            Response Body:
-            {jsonString}
-
-            Possible Reasons:
-            • Invalid API key
-            • API key expired
-            • Insufficient credits
-            • Model not available
-            • Account suspended
-            • Regional restrictions
-            """;
-
-                    Console.WriteLine(errorMessage);
-                    throw new Exception(errorMessage);
+                    throw new Exception($"OpenAI error:\n{jsonString}");
                 }
 
-                var content = JsonDocument.Parse(jsonString)
+                return JsonDocument.Parse(jsonString)
                     .RootElement.GetProperty("choices")[0]
                     .GetProperty("message")
                     .GetProperty("content")
-                    .GetString();
-
-                if (string.IsNullOrWhiteSpace(content))
-                    throw new Exception("AI returned empty response");
-
-                Console.WriteLine($" AI response received ({content.Length} chars)");
-                return content.Trim();
+                    .GetString()
+                    ?.Trim() ?? "[empty]";
             }
             catch (Exception ex)
             {
-                Console.WriteLine($" Error in AI client: {ex.Message}");
+                Console.WriteLine($"Error in AI client: {ex}");
                 throw;
             }
         }
+
     }
 
     public class AiRequest

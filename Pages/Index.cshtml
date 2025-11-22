@@ -149,8 +149,8 @@
                                 </div>
                                 <div class="btn-group btn-group-sm ms-3" role="group">
                                     <!-- Кнопка перехода -->
-                                    
-                                    <form method="post" asp-page="/ProjectChat" class="d-inline">
+
+                                    <form method="post" asp-page="/ProjectChat" asp-page-handler="Project" class="d-inline">
                                         <input type="hidden" name="projectId" value="@analysis.Id" />
                                         <button type="submit" class="btn btn-outline-info" title="Go To Project">
                                             <i class="bi bi-arrow-right"></i>
