@@ -75,6 +75,7 @@ namespace frontAIagent.Pages
                 return RedirectToPage("/Index");
             }
         }
+
         public async Task<IActionResult> OnPostAskGptAsync(string userMessage)
         {
             try
@@ -108,7 +109,7 @@ namespace frontAIagent.Pages
                 });
 
                 AnalysisResult = gptResponse;
-                SuccessMessage = "GPT ответ получен успешно!";
+                SuccessMessage = "GPT response received successfully!";
 
                 // Очищаем поле ввода
                 UserMessage = string.Empty;
@@ -117,7 +118,7 @@ namespace frontAIagent.Pages
             }
             catch (Exception ex)
             {
-                ErrorMessage = $"Ошибка: {ex.Message}";
+                ErrorMessage = $"Error: {ex.Message}";
                 return Page();
             }
         }
@@ -138,7 +139,7 @@ namespace frontAIagent.Pages
                 // Устанавливаем сообщения
                 if (FileContext.IsSuccess)
                 {
-                    SuccessMessage = $"✅ Successfully loaded {FileContext.SuccessFiles} files from project";
+                    SuccessMessage = $"Successfully loaded {FileContext.SuccessFiles} files from project";
                     if (FileContext.FailedFiles > 0)
                     {
                         SuccessMessage += $", {FileContext.FailedFiles} files failed to read";
@@ -146,7 +147,7 @@ namespace frontAIagent.Pages
                 }
                 else
                 {
-                    ErrorMessage = "❌ Failed to read any files from project";
+                    ErrorMessage = "Failed to read any files from project";
                 }
             }
             catch (Exception ex)
@@ -164,8 +165,8 @@ namespace frontAIagent.Pages
 
                 var files = new List<string>();
 
-                // Просто список папок для исключения
-                var badFolders = new[] { "venv", "node_modules", "bin", "obj", "__pycache__", ".git" };
+                // Папки для исключения
+                var excludedFolders = new[] { "venv", "node_modules", "bin", "obj", "__pycache__", ".git" };
 
                 if (fileType.Contains(","))
                 {
@@ -173,26 +174,51 @@ namespace frontAIagent.Pages
                     foreach (var type in types)
                     {
                         var pattern = $"*{type.Trim()}";
-                        files.AddRange(Directory.GetFiles(directoryPath, pattern, SearchOption.AllDirectories));
+                        var foundFiles = Directory.GetFiles(directoryPath, pattern, SearchOption.AllDirectories);
+
+                        // Фильтруем файлы из исключенных папок
+                        foreach (var file in foundFiles)
+                        {
+                            if (!IsInExcludedFolder(file, excludedFolders))
+                            {
+                                files.Add(file);
+                            }
+                        }
                     }
                 }
                 else
                 {
                     var pattern = fileType.StartsWith("*") ? fileType : $"*{fileType}";
-                    files.AddRange(Directory.GetFiles(directoryPath, pattern, SearchOption.AllDirectories));
+                    var foundFiles = Directory.GetFiles(directoryPath, pattern, SearchOption.AllDirectories);
+
+                    // Фильтруем файлы из исключенных папок
+                    foreach (var file in foundFiles)
+                    {
+                        if (!IsInExcludedFolder(file, excludedFolders))
+                        {
+                            files.Add(file);
+                        }
+                    }
                 }
 
-                // Фильтруем на выходе - убираем файлы из плохих папок
-                return files.Where(file =>
-                    !badFolders.Any(bad =>
-                        file.Contains($"/{bad}/") || file.Contains($"\\{bad}\\")
-                    )
-                ).ToList();
+                return files;
             }
             catch (Exception)
             {
                 return new List<string>();
             }
+        }
+
+        private bool IsInExcludedFolder(string filePath, string[] excludedFolders)
+        {
+            foreach (var folder in excludedFolders)
+            {
+                if (filePath.Contains($"/{folder}/") || filePath.Contains($"\\{folder}\\"))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public async Task<FileReadResult> ReadAndCombineFilesAsync(List<string> filePaths, string baseDirectory)
@@ -235,8 +261,8 @@ namespace frontAIagent.Pages
         private string GenerateProjectStructure(List<string> filePaths, string baseDirectory)
         {
             var structure = new StringBuilder();
-            structure.AppendLine("📁 PROJECT STRUCTURE");
-            structure.AppendLine("====================");
+            structure.AppendLine("PROJECT STRUCTURE (FILTERED)");
+            structure.AppendLine("============================");
 
             var directories = new Dictionary<string, List<string>>();
 
@@ -259,33 +285,23 @@ namespace frontAIagent.Pages
             {
                 if (string.IsNullOrEmpty(directory))
                 {
-                    structure.AppendLine("📂 / (root)");
+                    structure.AppendLine("[ROOT]");
                 }
                 else
                 {
-                    structure.AppendLine($"📂 {directory}/");
+                    structure.AppendLine($"[{directory}/]");
                 }
 
                 foreach (var file in files.OrderBy(f => f))
                 {
-                    var extension = Path.GetExtension(file).ToLower();
-                    var icon = extension switch
-                    {
-                        ".cs" => "🔷",
-                        ".py" => "🐍",
-                        ".txt" => "📄",
-                        ".log" => "📋",
-                        ".json" => "📋",
-                        ".xml" => "📋",
-                        ".config" => "⚙️",
-                        _ => "📄"
-                    };
-                    structure.AppendLine($"   {icon} {file}");
+                    structure.AppendLine($"   {file}");
                 }
                 structure.AppendLine();
             }
 
-            structure.AppendLine($"📊 Summary: {filePaths.Count} files in {directories.Count} directories");
+            structure.AppendLine($"Summary: {filePaths.Count} files in {directories.Count} directories");
+            structure.AppendLine("Excluded: venv/, node_modules/, bin/, obj/, __pycache__/ folders");
+
             return structure.ToString();
         }
 
@@ -309,7 +325,7 @@ namespace frontAIagent.Pages
                     return Page();
                 }
 
-                // Загружаем файлы при каждом сообщении (можно убрать если не нужно)
+                // Загружаем файлы при каждом сообщении
                 await LoadProjectFilesAsync();
 
                 ChatMessages.Add(new ChatMessage
@@ -345,28 +361,28 @@ namespace frontAIagent.Pages
         {
             await Task.Delay(1000);
 
-            return $@"🤖 AI ANALYSIS RESPONSE
+            return $@"AI ANALYSIS RESPONSE
 
-📋 Your Question: {userMessage}
+Your Question: {userMessage}
 
-🔍 Project: {project.AnalysisName}
-📁 Files: {FileContext.TotalFiles} total ({FileContext.SuccessFiles} readable)
-📊 Structure: {ProjectStructure.Split('\n').Count(l => l.Contains("📂"))} directories
+Project: {project.AnalysisName}
+Files: {FileContext.TotalFiles} total ({FileContext.SuccessFiles} readable)
+Structure: {ProjectStructure.Split('\n').Count(l => l.Contains("["))} directories
 
-📝 Analysis:
+Analysis:
 
 Based on the project structure and {FileContext.SuccessFiles} readable files, here are my findings:
 
-✅ **Project Organization**: {GetOrganizationAssessment()}
-⚠️  **Code Quality**: Needs detailed analysis of actual code
-💡 **Suggestions**: Review the specific file contents for detailed recommendations
+Project Organization: {GetOrganizationAssessment()}
+Code Quality: Needs detailed analysis of actual code
+Suggestions: Review the specific file contents for detailed recommendations
 
 Would you like me to analyze specific files or aspects in more detail?";
         }
 
         private string GetOrganizationAssessment()
         {
-            var dirCount = ProjectStructure.Split('\n').Count(l => l.Contains("📂"));
+            var dirCount = ProjectStructure.Split('\n').Count(l => l.Contains("[") && l.Contains("]"));
             if (dirCount > 5) return "Well-structured with multiple directories";
             if (dirCount > 2) return "Moderately organized";
             return "Simple flat structure - consider organizing into folders";
