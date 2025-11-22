@@ -137,7 +137,6 @@ namespace frontAIagent.Promt
         }
         public Task<string> BuildPromptDocumentationAsync(
     SavedProject project,
-    string userMessage,
     FileReadResult fileContext,
     string projectStructure,
     string personaHint =
@@ -215,13 +214,6 @@ namespace frontAIagent.Promt
                 sb.AppendLine("```");
                 sb.AppendLine(logs);
                 sb.AppendLine("```");
-                sb.AppendLine("---");
-            }
-
-            if (!string.IsNullOrWhiteSpace(userMessage))
-            {
-                sb.AppendLine("## 🔧 Дополнительные указания");
-                sb.AppendLine(userMessage);
                 sb.AppendLine("---");
             }
 

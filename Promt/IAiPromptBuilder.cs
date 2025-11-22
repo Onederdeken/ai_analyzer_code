@@ -26,7 +26,6 @@ namespace frontAIagent.Promt
         );
         Task<string> BuildPromptDocumentationAsync(
             SavedProject project,
-            string userMessage,
             FileReadResult fileContext,
             string projectStructure,
             string personaHint = "Представь, что ты senior Python developer с опытом 10+ лет",

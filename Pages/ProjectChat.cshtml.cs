@@ -127,7 +127,7 @@ namespace frontAIagent.Pages
                 });
 
                 // ❗ НОВОЕ: создаём общий промт
-                var fullPrompt = await _promptBuilder.BuildPromptDocumentationAsync(Project, userMessage, FileContext, ProjectStructure, personaHint: "Представь, что ты senior Python dev...", filteredLogText);
+                var fullPrompt = await _promptBuilder.BuildPromptDocumentationAsync(Project, FileContext, ProjectStructure, personaHint: "Представь, что ты senior Python dev...", filteredLogText);
 
                 // Отправляем в OpenAI
                 string gptResponse = await _aiClient.GenerateDocumentationFileAsync(fullPrompt);
