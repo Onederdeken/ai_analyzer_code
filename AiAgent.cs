@@ -20,7 +20,7 @@ namespace frontAIagent
         {
             try
             {
-                Console.WriteLine($"🟡 Sending AI request to {model}");
+                Console.WriteLine($"Sending AI request to {model}");
 
                 var requestBody = new
                 {
@@ -75,12 +75,12 @@ namespace frontAIagent
                 if (string.IsNullOrWhiteSpace(content))
                     throw new Exception("AI returned empty response");
 
-                Console.WriteLine($"✅ AI response received ({content.Length} chars)");
+                Console.WriteLine($" AI response received ({content.Length} chars)");
                 return content.Trim();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error in AI client: {ex.Message}");
+                Console.WriteLine($" Error in AI client: {ex.Message}");
                 throw;
             }
         }
