@@ -117,7 +117,7 @@ namespace frontAIagent.Pages
                 var fullPrompt = await _promptBuilder.BuildPromptDocumentationAsync(Project, FileContext, ProjectStructure, personaHint: "Представь, что ты senior Python dev...", filteredLogText);
 
                 // Отправляем в OpenAI
-                string gptResponse = await _aiClient.GenerateDocumentationFileAsync(fullPrompt);
+                string gptResponse = await _aiClient.GenerateDocumentationFileAsync(fullPrompt, "/root/ai-analyzer/ai_analyzer_code/documents");
 
                 var file = await _aiClient.DownloadFileAsync(gptResponse);
                 string savePath = Path.Combine("/root/ai-analyzer/ai_analyzer_code/documents", "documentation.md");

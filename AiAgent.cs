@@ -79,27 +79,20 @@ namespace frontAIagent
 
             return await resp.Content.ReadAsByteArrayAsync();
         }
-        public async Task<string> GenerateDocumentationFileAsync(string prompt)
+        public async Task<string> GenerateDocumentationFileAsync(string prompt, string outputDirectory)
         {
+            if (!Directory.Exists(outputDirectory))
+            {
+                Directory.CreateDirectory(outputDirectory);
+            }
+
             var requestBody = new
             {
                 model = "gpt-4.1",
-                input = prompt,
-                response = new
-                {
-                    format = new
-                    {
-                        type = "output_file",
-                        file_suffix = ".md"
-                    }
-                }
+                input = prompt
             };
 
-            var request = new HttpRequestMessage(
-                HttpMethod.Post,
-                "https://api.openai.com/v1/responses"
-            );
-
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/responses");
             request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {_apiKey}");
             request.Content = new StringContent(
                 JsonSerializer.Serialize(requestBody),
@@ -111,19 +104,26 @@ namespace frontAIagent
             var json = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
-                throw new Exception(json);
+                throw new Exception($"OpenAI API error: {json}");
 
             var doc = JsonDocument.Parse(json);
 
-            var fileId = doc.RootElement
+            var outputText = doc.RootElement
                 .GetProperty("output")[0]
-                .GetProperty("file_id")
+                .GetProperty("content")[0]
+                .GetProperty("text")
                 .GetString();
 
-            if (fileId == null)
-                throw new Exception("AI returned no file_id.");
+            if (string.IsNullOrWhiteSpace(outputText))
+                throw new Exception("AI returned empty response.");
 
-            return fileId!;
+            // Формируем уникальное имя файла
+            var fileName = $"documentation_{DateTime.Now:yyyyMMdd_HHmmss}.md";
+            var filePath = Path.Combine(outputDirectory, fileName);
+
+            await File.WriteAllTextAsync(filePath, outputText);
+
+            return filePath; // возвращаем путь к сгенерированному файлу
         }
     }
 
