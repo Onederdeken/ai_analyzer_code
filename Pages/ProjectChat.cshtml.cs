@@ -164,6 +164,9 @@ namespace frontAIagent.Pages
 
                 var files = new List<string>();
 
+                // Просто список папок для исключения
+                var badFolders = new[] { "venv", "node_modules", "bin", "obj", "__pycache__", ".git" };
+
                 if (fileType.Contains(","))
                 {
                     var types = fileType.Split(',');
@@ -179,7 +182,12 @@ namespace frontAIagent.Pages
                     files.AddRange(Directory.GetFiles(directoryPath, pattern, SearchOption.AllDirectories));
                 }
 
-                return files;
+                // Фильтруем на выходе - убираем файлы из плохих папок
+                return files.Where(file =>
+                    !badFolders.Any(bad =>
+                        file.Contains($"/{bad}/") || file.Contains($"\\{bad}\\")
+                    )
+                ).ToList();
             }
             catch (Exception)
             {
