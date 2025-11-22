@@ -30,6 +30,7 @@ namespace frontAIagent.Pages
         public string UserMessage { get; set; } = string.Empty;
 
         public FileReadResult FileContext { get; set; } = new FileReadResult();
+        public FileReadResult LogsContext { get; set; } = new FileReadResult();
         public List<ChatMessage> ChatMessages { get; set; } = new List<ChatMessage>();
         public string AnalysisResult { get; set; } = string.Empty;
         public string ErrorMessage { get; set; } = string.Empty;
