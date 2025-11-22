@@ -230,7 +230,7 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <pre class="analysis-output">@Model.AnalysisResult</pre>
+                        @Html.Raw(Model.AnalysisResult.Replace("<", "&lt;").Replace(">", "&gt;"))
                     </div>
                 </div>
             }

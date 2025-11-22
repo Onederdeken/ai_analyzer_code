@@ -23,7 +23,7 @@ namespace frontAIagent
             {
                 var requestBody = new
                 {
-                    model = "gpt-3.5-turbo",
+                    model = "gpt-4",
                     messages = new[]
                     {
                     new { role = "user", content = prompt }
