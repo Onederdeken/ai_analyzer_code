@@ -1,10 +1,9 @@
 ﻿using frontAIagent.Models;
 using frontAIagent.Pages;
+using System.Text;
 
 namespace frontAIagent.Promt
 {
-    using System.Text;
-
     public class AiPromptBuilder : IAiPromptBuilder
     {
         private readonly int _maxCharsPerFile = 4000;
@@ -18,7 +17,7 @@ namespace frontAIagent.Promt
             string userMessage,
             FileReadResult fileContext,
             string projectStructure,
-            string personaHint = "Ты — Senior Developer Assistant. Помогаешь писать рабочий код и даёшь живые примеры.",
+            string personaHint = "Ты — Senior Developer Assistant. Помогай писать рабочий код, объясняй простым языком и давай примеры.",
             string? logs = null)
         {
             await Task.CompletedTask;
@@ -28,19 +27,21 @@ namespace frontAIagent.Promt
             // 1) SYSTEM / PERSONA
             sb.AppendLine("=== SYSTEM / PERSONA ===");
             sb.AppendLine(personaHint);
+            sb.AppendLine();
+            sb.AppendLine("Ты — AI-ассистент, анализируешь проект, код и логи.");
             sb.AppendLine("Правила:");
-            sb.AppendLine("— Отвечай строго на русском, живо и понятно.");
-            sb.AppendLine("— Пиши код прямо с файлами и путями.");
-            sb.AppendLine("— Markdown-блоки для кода и diff, объясняй коротко при необходимости.");
-            sb.AppendLine("— Учитывай данные файлов и логов, которые прислали.");
+            sb.AppendLine("— Отвечай на русском, живо и понятно.");
+            sb.AppendLine("— Код всегда в Markdown-блоках, пояснения отдельным текстом.");
+            sb.AppendLine("— Используй пустые строки между заголовками, блоками кода и текстом.");
+            sb.AppendLine("— Общайся как коллега-разработчик, кратко и понятно.");
             sb.AppendLine();
 
             // 2) PROJECT METADATA
             sb.AppendLine("=== PROJECT METADATA ===");
-            sb.AppendLine($"Project: {project?.AnalysisName ?? "(нет имени)"}");
-            sb.AppendLine($"Id: {project?.Id ?? 0}");
-            sb.AppendLine($"Path: {project?.DirectoryPath ?? "(неизвестно)"}");
-            sb.AppendLine($"File filter: {project?.FileType ?? "(не указано)"}");
+            sb.AppendLine($"Project name: {project?.AnalysisName ?? "(нет имени)"}");
+            sb.AppendLine($"Project id: {project?.Id.ToString() ?? "(нет id)"}");
+            sb.AppendLine($"Directory path: {project?.DirectoryPath ?? "(неизвестно)"}");
+            sb.AppendLine($"File types filter: {project?.FileType ?? "(не указано)"}");
             sb.AppendLine();
 
             // 3) PROJECT STRUCTURE
@@ -48,82 +49,105 @@ namespace frontAIagent.Promt
             sb.AppendLine(projectStructure ?? "(нет структуры)");
             sb.AppendLine();
 
-            // 4) FILES POLICY
-            sb.AppendLine("=== FILES & CONTENT (policy) ===");
-            sb.AppendLine($"Файлов найдено: {fileContext?.TotalFiles ?? 0}, прочитано: {fileContext?.SuccessFiles ?? 0}");
-            sb.AppendLine($"Максимум {_maxFilesToInclude} файлов по {_maxCharsPerFile} символов.");
-            sb.AppendLine($"Общий лимит контекста: {_maxTotalContextChars} символов.");
-            sb.AppendLine();
-
-            // 5) FILES CONTENT
-            int totalChars = 0, included = 0;
-            if (fileContext?.ProcessedFiles?.Any() == true)
+            // 4) FILES CONTENT
+            sb.AppendLine("=== FILES CONTENT (truncated) ===");
+            if (fileContext?.ProcessedFiles != null && fileContext.ProcessedFiles.Any())
             {
-                sb.AppendLine("=== FILES CONTENT ===");
-                var files = fileContext.ProcessedFiles.Distinct()
-                    .OrderBy(GetPriorityForPath).ThenBy(f => f.Length);
-                foreach (var rel in files)
+                var totalChars = 0;
+                var includedFiles = 0;
+
+                foreach (var rel in fileContext.ProcessedFiles
+                             .Distinct()
+                             .OrderBy(GetPriorityForPath)
+                             .ThenBy(f => f.Length))
                 {
-                    if (included >= _maxFilesToInclude || totalChars >= _maxTotalContextChars) break;
+                    if (includedFiles >= _maxFilesToInclude || totalChars >= _maxTotalContextChars) break;
+
                     var content = ExtractFileContent(fileContext.CombinedContent ?? "", rel);
-                    if (content == null) continue;
-                    var trimmed = SanitizeForPrompt(TrimToLength(content, _maxCharsPerFile));
-                    sb.AppendLine($"--- FILE: {rel} ---");
+                    if (string.IsNullOrEmpty(content)) continue;
+
+                    var trimmed = TrimToLength(content, _maxCharsPerFile);
+                    trimmed = SanitizeForPrompt(trimmed);
+
+                    // Код в блоке Markdown
+                    sb.AppendLine($"📌 *Файл:* {rel}");
+                    sb.AppendLine("```csharp");
                     sb.AppendLine(trimmed);
+                    sb.AppendLine("```");
                     sb.AppendLine();
-                    included++;
+
+                    includedFiles++;
                     totalChars += trimmed.Length;
                 }
             }
-            else sb.AppendLine("(Нет файлов для включения.)");
+            else
+            {
+                sb.AppendLine("(Нет доступных файлов для включения.)");
+            }
+
             sb.AppendLine();
 
-            // 6) LOGS
+            // 5) LOGS
             if (!string.IsNullOrWhiteSpace(logs))
             {
+                var logsTrimmed = TrimToLength(logs, Math.Min(8000, _maxTotalContextChars / 2));
                 sb.AppendLine("=== LOGS ===");
-                sb.AppendLine(SanitizeForPrompt(TrimToLength(logs, Math.Min(8000, _maxTotalContextChars / 2))));
+                sb.AppendLine("```text");
+                sb.AppendLine(SanitizeForPrompt(logsTrimmed));
+                sb.AppendLine("```");
                 sb.AppendLine();
             }
 
-            // 7) USER REQUEST
+            // 6) USER REQUEST
             sb.AppendLine("=== USER REQUEST ===");
             sb.AppendLine(userMessage.Trim());
             sb.AppendLine();
 
-            // 8) OUTPUT FORMAT
-            sb.AppendLine("=== TASK / OUTPUT ===");
-            sb.AppendLine("Отвечай живо, как коллега. Код вставляй в Markdown-блоки:");
-            sb.AppendLine("📌 *Файл:* /path/to/file.ext");
-            sb.AppendLine("```language");
-            sb.AppendLine("// код здесь");
-            sb.AppendLine("```");
-            sb.AppendLine("Diff:");
-            sb.AppendLine("```diff");
-            sb.AppendLine("+ добавлено");
-            sb.AppendLine("- удалено");
-            sb.AppendLine("```");
-            sb.AppendLine("Делай инструкции и шаги только если они реально помогают понять код.");
-            sb.AppendLine("Пиши ясно, чтобы можно было скопировать и вставить код.");
-            sb.AppendLine("Если информация неполная — попроси недостающие файлы.");
-            sb.AppendLine("Если запрос не относится к проекту, ответь: \"Этот запрос не относится к проекту.\"");
+            // 7) TASK / OUTPUT FORMAT
+            sb.AppendLine("=== TASK / OUTPUT FORMAT ===");
+            sb.AppendLine("Ответ должен быть живым, как от коллеги-разработчика:");
+            sb.AppendLine("- Код в Markdown-блоках, пояснения отдельным текстом.");
+            sb.AppendLine("- Между блоками пустые строки для читаемости.");
+            sb.AppendLine("- Diff или вставки кода оформляй так:");
+            sb.AppendLine("```diff\n+ добавлено\n- удалено\n```");
+            sb.AppendLine("Или целиком:\n```csharp\n...код...\n```");
+            sb.AppendLine("Или 'вставить в конец файла':\n```python\n# вставить сюда\n```");
+            sb.AppendLine("- Пиши так, чтобы можно было сразу копировать и вставлять код.");
+            sb.AppendLine("- Объяснения короткие, по сути, не сухие списки.");
             sb.AppendLine();
 
-            // FINAL TRIM
+            sb.AppendLine("Инструкции по проверке:");
+            sb.AppendLine("— как запустить проект;");
+            sb.AppendLine("— команды для проверки;");
+            sb.AppendLine("— ожидаемый результат.");
+            sb.AppendLine();
+
+            sb.AppendLine("Если информации недостаточно — попроси недостающие файлы.");
+            sb.AppendLine("Если запрос не относится к проекту/коду — ответь строго:");
+            sb.AppendLine("\"Этот запрос не относится к проекту. Я работаю только в контексте текущего кода.\"");
+            sb.AppendLine();
+
+            // Ограничение на размер
             var result = sb.ToString();
             if (result.Length > _maxTotalContextChars * 2)
-                result = result.Substring(0, _maxTotalContextChars * 2) + "\n\n[TRUNCATED CONTEXT]";
+                result = result.Substring(0, _maxTotalContextChars * 2) + "\n\n[TRUNCATED CONTEXT DUE TO SIZE LIMIT]";
 
             return result;
         }
 
+        // --- Helpers ---
         private static int GetPriorityForPath(string path)
         {
-            return Path.GetExtension(path).ToLowerInvariant() switch
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            return ext switch
             {
-                ".cs" or ".py" => 1,
-                ".js" or ".ts" or ".json" => 2,
-                ".xml" or ".config" => 3,
+                ".cs" => 1,
+                ".py" => 1,
+                ".js" => 2,
+                ".ts" => 2,
+                ".json" => 2,
+                ".xml" => 3,
+                ".config" => 3,
                 ".md" => 4,
                 ".txt" => 5,
                 ".log" => 6,
@@ -134,26 +158,35 @@ namespace frontAIagent.Promt
         private static string? ExtractFileContent(string combined, string relativePath)
         {
             if (string.IsNullOrEmpty(combined)) return null;
+
             var marker = $"----------------{relativePath}----------------";
             var idx = combined.IndexOf(marker, StringComparison.Ordinal);
             if (idx < 0) return null;
+
             idx += marker.Length;
             var nextIdx = combined.IndexOf("----------------", idx, StringComparison.Ordinal);
             if (nextIdx < 0) nextIdx = combined.Length;
+
             return combined.Substring(idx, nextIdx - idx).Trim();
         }
 
         private string TrimToLength(string text, int max)
         {
             if (text.Length <= max) return text;
-            return text.Substring(0, max / 2) + "\n\n...[TRUNCATED]...\n\n" + text.Substring(text.Length - max / 2, max / 2);
+            return text.Substring(0, max / 2) +
+                   "\n\n...[TRUNCATED]...\n\n" +
+                   text.Substring(text.Length - max / 2, max / 2);
         }
 
         private string SanitizeForPrompt(string s)
         {
             var sb = new StringBuilder();
             foreach (var ch in s)
-                if (ch != '\0' && (!char.IsControl(ch) || ch == '\n' || ch == '\r' || ch == '\t')) sb.Append(ch);
+            {
+                if (ch == '\0') continue;
+                if (char.IsControl(ch) && ch != '\n' && ch != '\r' && ch != '\t') continue;
+                sb.Append(ch);
+            }
             return sb.ToString();
         }
     }
