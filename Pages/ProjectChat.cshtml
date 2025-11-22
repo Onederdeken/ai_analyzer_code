@@ -124,18 +124,13 @@
                             </div>
                             <span>Architecture</span>
                         </button>
-                        <form method="post" asp-page-handler="AskGptDocumentation" class="d-inline w-100">
-                            <input type="hidden" name="projectId" value="@Model.Project.Id" />
-                            <input type="hidden" name="userMessage" value="Generate complete project documentation including classes, methods, project structure, usage instructions, and examples" />
 
-                            <button type="submit" class="quick-action-btn w-100 border-0 bg-transparent">
-                                <div class="action-icon bg-secondary bg-opacity-10 text-secondary">
-                                    <i class="bi bi-book"></i>
-                                </div>
-                                <span>Documentation</span>
-                            </button>
-                        </form>
-
+                        <button type="button" class="quick-action-btn" onclick="submitDocumentation(@Model.Project.Id)">
+                            <div class="action-icon bg-secondary bg-opacity-10 text-secondary">
+                                <i class="bi bi-book"></i>
+                            </div>
+                            <span>Documentation</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -342,6 +337,27 @@
 
 @section Scripts {
     <script>
+                function submitDocumentation(projectId) {
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.action = '?handler=AskGptDocumentation';
+
+            const projectIdInput = document.createElement('input');
+            projectIdInput.type = 'hidden';
+            projectIdInput.name = 'projectId';
+            projectIdInput.value = projectId;
+
+            const messageInput = document.createElement('input');
+            messageInput.type = 'hidden';
+            messageInput.name = 'userMessage';
+            messageInput.value = 'Generate complete project documentation including classes, methods, project structure, usage instructions, and examples';
+
+            form.appendChild(projectIdInput);
+            form.appendChild(messageInput);
+            document.body.appendChild(form);
+
+            form.submit();
+        }
         function quickPrompt(promptText) {
             document.getElementById('userMessage').value = promptText;
             document.getElementById('userMessage').focus();
