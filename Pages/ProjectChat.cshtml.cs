@@ -4,6 +4,7 @@ using frontAIagent.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace frontAIagent.Pages
 {
@@ -100,6 +101,21 @@ namespace frontAIagent.Pages
 
                 // Загружаем файлы проекта
                 await LoadProjectFilesAsync();
+                var filteredLogs = await ReadAndFilterLogsAsync(
+                    Project.LogPath ?? Project.DirectoryPath,
+                    new List<string> { "error", "warning" }
+                );
+                var sb = new StringBuilder();
+
+                foreach (var kvp in filteredLogs)
+                {
+                    sb.AppendLine($"--- {kvp.Key} ---");
+                    foreach (var line in kvp.Value)
+                        sb.AppendLine(line);
+                    sb.AppendLine();
+                }
+
+                var filteredLogText = sb.ToString();
 
                 // Добавляем в чат пользователя
                 ChatMessages.Add(new ChatMessage
@@ -110,7 +126,7 @@ namespace frontAIagent.Pages
                 });
 
                 // ❗ НОВОЕ: создаём общий промт
-                var fullPrompt = await _promptBuilder.BuildPromptAsync(Project, userMessage, FileContext, ProjectStructure, personaHint: "Представь, что ты senior Python dev...");
+                var fullPrompt = await _promptBuilder.BuildPromptAsync(Project, userMessage, FileContext, ProjectStructure, personaHint: "Представь, что ты senior Python dev...",filteredLogText);
 
                 // Отправляем в OpenAI
                 var gptResponse = await _aiClient.SendPromptAsync(fullPrompt);
@@ -129,6 +145,36 @@ namespace frontAIagent.Pages
                 ErrorMessage = ex.Message;
                 return Page();
             }
+        }
+        public async Task<Dictionary<string, List<string>>> ReadAndFilterLogsAsync(string logDirectory, List<string> filters)
+        {
+            var result = new Dictionary<string, List<string>>();
+
+            if (!Directory.Exists(logDirectory))
+                return result;
+
+            // Получаем все .log файлы (включая поддиректории)
+            var logFiles = Directory.GetFiles(logDirectory, "*.log", SearchOption.AllDirectories);
+
+            foreach (var file in logFiles)
+            {
+                var filteredLines = new List<string>();
+                var allLines = await System.IO.File.ReadAllLinesAsync(file);
+
+                foreach (var line in allLines)
+                {
+                    // Проверяем, содержит ли строка хотя бы одно ключевое слово без учёта регистра
+                    if (filters.Any(f => Regex.IsMatch(line, $@"\b{Regex.Escape(f)}\b", RegexOptions.IgnoreCase)))
+                    {
+                        filteredLines.Add(line);
+                    }
+                }
+
+                if (filteredLines.Any())
+                    result[Path.GetFileName(file)] = filteredLines;
+            }
+
+            return result;
         }
 
         private async Task LoadProjectFilesAsync()

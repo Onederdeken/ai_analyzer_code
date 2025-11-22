@@ -95,6 +95,7 @@ namespace frontAIagent.Promt
                 sb.AppendLine("```text");
                 sb.AppendLine(SanitizeForPrompt(logsTrimmed));
                 sb.AppendLine("```");
+                sb.AppendLine("Изучи логи и если есть какие узкие места проблемы текущие или возможные будущие проблемы сообщи");
                 sb.AppendLine();
             }
 
