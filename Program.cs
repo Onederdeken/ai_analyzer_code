@@ -14,7 +14,16 @@ builder.Services.AddRazorPages();
 builder.Services.AddHttpClient<AiClient>();
 builder.Services.AddScoped<IAiPromptBuilder, AiPromptBuilder>();
 
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(20);
+    serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(20);
+});
 
+builder.Services.Configure<HostOptions>(opts =>
+{
+    opts.ShutdownTimeout = TimeSpan.FromMinutes(20);
+});
 
 // Database configuration
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
