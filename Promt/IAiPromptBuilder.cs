@@ -24,6 +24,14 @@ namespace frontAIagent.Promt
             string personaHint = "Представь, что ты senior Python developer с опытом 10+ лет",
             string? logs = null
         );
+        Task<string> BuildPromptDocumentationAsync(
+            SavedProject project,
+            string userMessage,
+            FileReadResult fileContext,
+            string projectStructure,
+            string personaHint = "Представь, что ты senior Python developer с опытом 10+ лет",
+            string? logs = null
+        );
     }
 
 }

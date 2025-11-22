@@ -83,7 +83,68 @@ namespace frontAIagent.Pages
                 return RedirectToPage("/Index");
             }
         }
+        public async Task<IActionResult> OnPostAskGptDocumentationAsync(int projectId, string userMessage)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(userMessage))
+                {
+                    ErrorMessage = "Message cannot be empty";
+                    return Page();
+                }
 
+                UserMessage = userMessage;
+
+                var project = await _projectRepository.GetProjectByIdAsync(projectId);
+                Project = project ?? throw new Exception("Project not found");
+
+                // Загружаем файлы проекта
+                await LoadProjectFilesAsync();
+                var filteredLogs = await ReadAndFilterLogsAsync(
+                    Project.LogPath ?? Project.DirectoryPath,
+                    new List<string> { "error", "warning" }
+                );
+                var sb = new StringBuilder();
+
+                foreach (var kvp in filteredLogs)
+                {
+                    sb.AppendLine($"--- {kvp.Key} ---");
+                    foreach (var line in kvp.Value)
+                        sb.AppendLine(line);
+                    sb.AppendLine();
+                }
+
+                var filteredLogText = sb.ToString();
+
+                // Добавляем в чат пользователя
+                ChatMessages.Add(new ChatMessage
+                {
+                    Content = userMessage,
+                    IsUser = true,
+                    Timestamp = DateTime.Now
+                });
+
+                // ❗ НОВОЕ: создаём общий промт
+                var fullPrompt = await _promptBuilder.BuildPromptDocumentationAsync(Project, userMessage, FileContext, ProjectStructure, personaHint: "Представь, что ты senior Python dev...", filteredLogText);
+
+                // Отправляем в OpenAI
+                var gptResponse = await _aiClient.SendPromptAsync(fullPrompt);
+
+                ChatMessages.Add(new ChatMessage
+                {
+                    Content = gptResponse,
+                    IsUser = false,
+                    Timestamp = DateTime.Now
+                });
+
+                return Page();
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = ex.Message;
+                return Page();
+            }
+        }
         public async Task<IActionResult> OnPostAskGptAsync(int projectId, string userMessage)
         {
             try

@@ -124,13 +124,17 @@
                             </div>
                             <span>Architecture</span>
                         </button>
+                        <form method="post" asp-page-handler="AskGptDocumentation" class="d-inline w-100">
+                            <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                            <input type="hidden" name="userMessage" value="Generate complete project documentation including classes, methods, project structure, usage instructions, and examples" />
 
-                        <button type="button" class="quick-action-btn" onclick="quickPrompt('Generate complete project documentation including classes, methods, project structure, usage instructions, and examples')">
-                            <div class="action-icon bg-secondary bg-opacity-10 text-secondary">
-                                <i class="bi bi-book"></i>
-                            </div>
-                            <span>Documentation</span>
-                        </button>
+                            <button type="submit" class="quick-action-btn w-100 border-0 bg-transparent">
+                                <div class="action-icon bg-secondary bg-opacity-10 text-secondary">
+                                    <i class="bi bi-book"></i>
+                                </div>
+                                <span>Documentation</span>
+                            </button>
+                        </form>
 
                     </div>
                 </div>

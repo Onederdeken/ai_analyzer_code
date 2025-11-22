@@ -135,6 +135,120 @@ namespace frontAIagent.Promt
 
             return result;
         }
+        public Task<string> BuildPromptDocumentationAsync(
+    SavedProject project,
+    string userMessage,
+    FileReadResult fileContext,
+    string projectStructure,
+    string personaHint = "Представь, что ты тимлид / системный архитектор уровня Senior+ с глубоким пониманием разработки и большим опытом документирования сложных систем.",
+    string? logs = null
+)
+        {
+            var sb = new StringBuilder();
+
+            sb.AppendLine(personaHint);
+            sb.AppendLine();
+            sb.AppendLine("Твоя задача — составить **полноценную, структурированную, профессиональную документацию** по проекту.");
+            sb.AppendLine("Документация должна быть оформлена в стиле industrial-grade / enterprise уровня, так как её будут использовать новые разработчики, DevOps, аналитики и тимлиды.");
+            sb.AppendLine();
+            sb.AppendLine("### Требования:");
+            sb.AppendLine("- Общее описание проекта");
+            sb.AppendLine("- Архитектура (модули, связи, потоки данных)");
+            sb.AppendLine("- Разбор классов/функций/методов");
+            sb.AppendLine("- Зависимости");
+            sb.AppendLine("- Запуск проекта");
+            sb.AppendLine("- Переменные окружения");
+            sb.AppendLine("- Примеры использования");
+            sb.AppendLine("- Возможные улучшения документации");
+            sb.AppendLine();
+            sb.AppendLine("Оформление: Markdown, заголовки, списки, таблицы, кодовые блоки.");
+            sb.AppendLine();
+            sb.AppendLine("---");
+            sb.AppendLine("## 📁 Структура проекта");
+            sb.AppendLine(projectStructure);
+            sb.AppendLine();
+            sb.AppendLine("---");
+            sb.AppendLine("## 📦 Основные данные проекта");
+            sb.AppendLine($"**Project Name:** {project.AnalysisName}");
+            sb.AppendLine($"**Directory:** {project.DirectoryPath}");
+            sb.AppendLine($"**File Type:** {project.FileType}");
+            sb.AppendLine();
+            sb.AppendLine("---");
+
+            if (!string.IsNullOrWhiteSpace(project.ProgramDescription))
+            {
+                sb.AppendLine("## 📝 Описание проекта (из записи пользователя)");
+                sb.AppendLine(project.ProgramDescription);
+                sb.AppendLine();
+                sb.AppendLine("---");
+            }
+
+            //
+            // SAFE FILE HANDLING BLOCK
+            //
+            if (fileContext != null)
+            {
+                sb.AppendLine("## 📚 Содержимое файлов проекта");
+
+                // 1) Попытка получить список файлов
+                var files = fileContext.GetType().GetProperty("ProcessedFiles")?.GetValue(fileContext) as IEnumerable<string>;
+                var fileContents = fileContext.GetType().GetProperty("FileContents")?.GetValue(fileContext);
+
+                // dictionary<string,string> ?
+                var dict = fileContents as IDictionary<string, string>;
+
+                if (files != null)
+                {
+                    foreach (var file in files)
+                    {
+                        sb.AppendLine();
+                        sb.AppendLine($"### 📄 {file}");
+                        sb.AppendLine("```");
+
+                        string content = "";
+
+                        // если есть словарь — используем его
+                        if (dict != null && dict.ContainsKey(file))
+                            content = dict[file];
+                        else
+                        {
+                            // иначе пробуем свойство Content
+                            var contentProp = fileContext.GetType().GetProperty("Content")?.GetValue(fileContext) as string;
+                            if (!string.IsNullOrEmpty(contentProp))
+                                content = contentProp;
+                        }
+
+                        sb.AppendLine(content ?? "");
+                        sb.AppendLine("```");
+                    }
+                }
+
+                sb.AppendLine();
+                sb.AppendLine("---");
+            }
+
+            if (!string.IsNullOrWhiteSpace(logs))
+            {
+                sb.AppendLine("## 🧾 Логи проекта");
+                sb.AppendLine("```");
+                sb.AppendLine(logs);
+                sb.AppendLine("```");
+                sb.AppendLine("---");
+            }
+
+            if (!string.IsNullOrWhiteSpace(userMessage))
+            {
+                sb.AppendLine("## 🔧 Дополнительный запрос пользователя");
+                sb.AppendLine(userMessage);
+                sb.AppendLine("---");
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("Теперь составь **полную, развёрнутую, аккуратную документацию**.");
+
+            return Task.FromResult(sb.ToString());
+        }
+
 
         // --- Helpers ---
         private static int GetPriorityForPath(string path)
