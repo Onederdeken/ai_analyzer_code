@@ -1,4 +1,5 @@
 ﻿using frontAIagent.Models;
+using frontAIagent.Promt;
 using frontAIagent.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -10,11 +11,16 @@ namespace frontAIagent.Pages
     {
         private readonly IProjectRepository _projectRepository;
         private readonly AiClient _aiClient;
+        private readonly IAiPromptBuilder _promptBuilder;
 
-        public ProjectChatModel(IProjectRepository projectRepository, AiClient aiClient)
+        public ProjectChatModel(
+            IProjectRepository projectRepository,
+            AiClient aiClient,
+            IAiPromptBuilder promptBuilder)
         {
             _projectRepository = projectRepository;
             _aiClient = aiClient;
+            _promptBuilder = promptBuilder;
         }
 
         [BindProperty]
@@ -76,11 +82,10 @@ namespace frontAIagent.Pages
             }
         }
 
-        public async Task<IActionResult> OnPostAskGptAsync(int projectId,string userMessage)
+        public async Task<IActionResult> OnPostAskGptAsync(int projectId, string userMessage)
         {
             try
             {
-                // Проверяем сообщение
                 if (string.IsNullOrWhiteSpace(userMessage))
                 {
                     ErrorMessage = "Message cannot be empty";
@@ -89,19 +94,31 @@ namespace frontAIagent.Pages
 
                 UserMessage = userMessage;
 
-                // Добавляем сообщение пользователя в историю
+                var project = await _projectRepository.GetProjectByIdAsync(projectId);
+                Project = project ?? throw new Exception("Project not found");
+
+                // Загружаем файлы проекта
+                await LoadProjectFilesAsync();
+
+                // Добавляем в чат пользователя
                 ChatMessages.Add(new ChatMessage
                 {
                     Content = userMessage,
                     IsUser = true,
                     Timestamp = DateTime.Now
                 });
-                var project = await _projectRepository.GetProjectByIdAsync(projectId);
-                Project = project;
-                // Просто отправляем сообщение в GPT
-                var gptResponse = await _aiClient.GetAiResponseAsync(userMessage);
 
-                // Добавляем ответ GPT в историю
+                // ❗ НОВОЕ: создаём общий промт
+                var fullPrompt = await _promptBuilder.BuildPromptAsync(
+                    Project,
+                    userMessage,
+                    FileContext,
+                    ProjectStructure
+                );
+
+                // Отправляем в OpenAI
+                var gptResponse = await _aiClient.SendPromptAsync(fullPrompt);
+
                 ChatMessages.Add(new ChatMessage
                 {
                     Content = gptResponse,
@@ -109,19 +126,11 @@ namespace frontAIagent.Pages
                     Timestamp = DateTime.Now
                 });
 
-                AnalysisResult = gptResponse;
-                SuccessMessage = "GPT response received successfully!";
-
-                // Очищаем поле ввода
-                UserMessage = string.Empty;
-
                 return Page();
             }
             catch (Exception ex)
             {
-                var project = await _projectRepository.GetProjectByIdAsync(projectId);
-                Project = project;
-                ErrorMessage = $"Error: {ex.Message}";
+                ErrorMessage = ex.Message;
                 return Page();
             }
         }

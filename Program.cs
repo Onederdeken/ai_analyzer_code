@@ -1,5 +1,6 @@
 using frontAIagent;
 using frontAIagent.Data;
+using frontAIagent.Promt;
 using frontAIagent.Repositories;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,6 +12,7 @@ builder.Configuration
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddHttpClient<AiClient>();
+builder.Services.AddScoped<IAiPromptBuilder, AiPromptBuilder>();
 
 
 

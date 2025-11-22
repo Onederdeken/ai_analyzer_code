@@ -15,37 +15,30 @@ namespace frontAIagent
             _httpClient = httpClient;
             _httpClient.Timeout = TimeSpan.FromSeconds(300);
             _apiKey = aiSettings["OpenAiApiKey"];
-            Console.WriteLine(
-    string.Join(" ", _apiKey.Select(c => ((int)c).ToString()))
-);
         }
 
-        public async Task<string> GetAiResponseAsync(string prompt, string model = "gpt-3.5-turbo", double temperature = 0.7, int maxTokens = 2000)
+        public async Task<string> SendPromptAsync(string prompt)
         {
             try
             {
-                Console.WriteLine($"Sending AI request to {model}");
-
-                // 1. Проверка API KEY на ASCII
-                if (_apiKey.Any(c => c > 127))
-                    throw new Exception($"API KEY contains non-ASCII characters: {string.Join(" ", _apiKey.Select(c => (int)c))}");
-
                 var requestBody = new
                 {
-                    model = model,
+                    model = "gpt-3.5-turbo",
                     messages = new[]
                     {
-                new { role = "user", content = prompt }
-            },
-                    temperature = temperature,
-                    max_tokens = maxTokens
+                    new { role = "user", content = prompt }
+                },
+                    temperature = 0.7,
+                    max_tokens = 2000
                 };
 
-                var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/chat/completions");
+                var request = new HttpRequestMessage(
+                    HttpMethod.Post,
+                    "https://api.openai.com/v1/chat/completions"
+                );
 
                 request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {_apiKey}");
 
-                // ВАЖНО: добавляем JSON без BOM
                 request.Content = new StringContent(
                     JsonSerializer.Serialize(requestBody),
                     Encoding.UTF8,
@@ -53,14 +46,13 @@ namespace frontAIagent
                 );
 
                 var response = await _httpClient.SendAsync(request);
-                var jsonString = await response.Content.ReadAsStringAsync();
+
+                var json = await response.Content.ReadAsStringAsync();
 
                 if (!response.IsSuccessStatusCode)
-                {
-                    throw new Exception($"OpenAI error:\n{jsonString}");
-                }
+                    throw new Exception(json);
 
-                return JsonDocument.Parse(jsonString)
+                return JsonDocument.Parse(json)
                     .RootElement.GetProperty("choices")[0]
                     .GetProperty("message")
                     .GetProperty("content")
@@ -69,12 +61,12 @@ namespace frontAIagent
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in AI client: {ex}");
+                Console.WriteLine($"AI ERROR: {ex}");
                 throw;
             }
         }
-
     }
+
 
     public class AiRequest
     {
