@@ -13,7 +13,7 @@ namespace frontAIagent
         {
             var aiSettings = configuration.GetSection("AiSettings");
             _httpClient = httpClient;
-            _httpClient.Timeout = TimeSpan.FromSeconds(600);
+            _httpClient.Timeout = TimeSpan.FromSeconds(1000);
             _apiKey = aiSettings["OpenAiApiKey"];
         }
 
