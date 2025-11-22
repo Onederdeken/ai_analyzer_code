@@ -125,12 +125,17 @@
                             <span>Architecture</span>
                         </button>
 
-                        <button type="button" class="quick-action-btn" onclick="submitDocumentation(@Model.Project.Id)">
-                            <div class="action-icon bg-secondary bg-opacity-10 text-secondary">
-                                <i class="bi bi-book"></i>
-                            </div>
-                            <span>Documentation</span>
-                        </button>
+                        <!-- Documentation button as POST -->
+                        <form method="post" asp-page-handler="AskGptDocumentation" class="quick-action-btn p-0 m-0 border-0 bg-transparent">
+                            <button type="submit" class="quick-action-btn w-100">
+                                <div class="action-icon bg-secondary bg-opacity-10 text-secondary">
+                                    <i class="bi bi-book"></i>
+                                </div>
+                                <span>Documentation</span>
+                            </button>
+                        </form>
+                    </div>
+
                     </div>
                 </div>
             </div>
