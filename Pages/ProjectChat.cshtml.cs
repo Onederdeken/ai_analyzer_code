@@ -85,17 +85,13 @@ namespace frontAIagent.Pages
                 return RedirectToPage("/Index");
             }
         }
-        public async Task<IActionResult> OnPostAskGptDocumentationAsync(int projectId, string userMessage)
+        public async Task<IActionResult> OnPostAskGptDocumentationAsync(int projectId)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(userMessage))
-                {
-                    ErrorMessage = "Message cannot be empty";
-                    return Page();
-                }
+               
 
-                UserMessage = userMessage;
+               
 
                 var project = await _projectRepository.GetProjectByIdAsync(projectId);
                 Project = project ?? throw new Exception("Project not found");
@@ -118,13 +114,7 @@ namespace frontAIagent.Pages
 
                 var filteredLogText = sb.ToString();
 
-                // Добавляем в чат пользователя
-                ChatMessages.Add(new ChatMessage
-                {
-                    Content = userMessage,
-                    IsUser = true,
-                    Timestamp = DateTime.Now
-                });
+               
 
                 // ❗ НОВОЕ: создаём общий промт
                 var fullPrompt = await _promptBuilder.BuildPromptDocumentationAsync(Project, FileContext, ProjectStructure, personaHint: "Представь, что ты senior Python dev...", filteredLogText);
@@ -147,6 +137,8 @@ namespace frontAIagent.Pages
             }
             catch (Exception ex)
             {
+                var project = await _projectRepository.GetProjectByIdAsync(projectId);
+                Project = project ?? throw new Exception("Project not found");
                 ErrorMessage = ex.Message;
                 return Page();
             }
