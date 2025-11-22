@@ -65,6 +65,20 @@ namespace frontAIagent
                 throw;
             }
         }
+        public async Task<byte[]> DownloadFileAsync(string fileId)
+        {
+            var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"https://api.openai.com/v1/files/{fileId}/content"
+            );
+
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {_apiKey}");
+
+            var resp = await _httpClient.SendAsync(request);
+            resp.EnsureSuccessStatusCode();
+
+            return await resp.Content.ReadAsByteArrayAsync();
+        }
         public async Task<string> GenerateDocumentationFileAsync(string prompt)
         {
             var requestBody = new

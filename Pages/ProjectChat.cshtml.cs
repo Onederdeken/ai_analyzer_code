@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace frontAIagent.Pages
 {
@@ -129,7 +130,7 @@ namespace frontAIagent.Pages
                 var fullPrompt = await _promptBuilder.BuildPromptDocumentationAsync(Project, userMessage, FileContext, ProjectStructure, personaHint: "Представь, что ты senior Python dev...", filteredLogText);
 
                 // Отправляем в OpenAI
-                var gptResponse = await _aiClient.GenerateDocumentationFileAsync(fullPrompt);
+                string gptResponse = await _aiClient.GenerateDocumentationFileAsync(fullPrompt);
 
                 ChatMessages.Add(new ChatMessage
                 {
@@ -137,8 +138,11 @@ namespace frontAIagent.Pages
                     IsUser = false,
                     Timestamp = DateTime.Now
                 });
-
-                return await DownloadFileAsync(fileId);
+                var file = await _aiClient.DownloadFileAsync(gptResponse);
+                string savePath = Path.Combine("/root/files", "documentation.md");
+                await System.IO.File.WriteAllBytesAsync(savePath, file);
+                this.SuccessMessage = "Файл документации успешно сохранен";
+                return Page();
 
             }
             catch (Exception ex)
@@ -147,20 +151,7 @@ namespace frontAIagent.Pages
                 return Page();
             }
         }
-        public async Task<byte[]> DownloadFileAsync(string fileId)
-        {
-            var request = new HttpRequestMessage(
-                HttpMethod.Get,
-                $"https://api.openai.com/v1/files/{fileId}/content"
-            );
-
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {_apiKey}");
-
-            var resp = await _httpClient.SendAsync(request);
-            resp.EnsureSuccessStatusCode();
-
-            return await resp.Content.ReadAsByteArrayAsync();
-        }
+        
         public async Task<IActionResult> OnPostAskGptAsync(int projectId, string userMessage)
         {
             try
