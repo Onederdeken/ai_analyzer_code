@@ -129,7 +129,7 @@ namespace frontAIagent.Pages
                     Timestamp = DateTime.Now
                 });
                 var file = await _aiClient.DownloadFileAsync(gptResponse);
-                string savePath = Path.Combine("/root/files", "documentation.md");
+                string savePath = Path.Combine("/root/ai-analyzer/ai_analyzer_code/documents", "documentation.md");
                 await System.IO.File.WriteAllBytesAsync(savePath, file);
                 this.SuccessMessage = "Файл документации успешно сохранен";
                 return Page();
