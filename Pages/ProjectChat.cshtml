@@ -157,6 +157,7 @@
 
                         <!-- Documentation button as POST -->
                         <form method="post" asp-page-handler="AskGptDocumentation" class="quick-action-btn p-0 m-0 border-0 bg-transparent">
+                            <input type="hidden" name="projectId" value="@Model.Project.Id" />
                             <button type="submit" class="quick-action-btn w-100">
                                 <div class="action-icon bg-secondary bg-opacity-10 text-secondary">
                                     <i class="bi bi-book"></i>

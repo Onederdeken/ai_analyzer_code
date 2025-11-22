@@ -89,9 +89,6 @@ namespace frontAIagent.Pages
         {
             try
             {
-               
-
-               
 
                 var project = await _projectRepository.GetProjectByIdAsync(projectId);
                 Project = project ?? throw new Exception("Project not found");
@@ -122,12 +119,6 @@ namespace frontAIagent.Pages
                 // Отправляем в OpenAI
                 string gptResponse = await _aiClient.GenerateDocumentationFileAsync(fullPrompt);
 
-                ChatMessages.Add(new ChatMessage
-                {
-                    Content = gptResponse,
-                    IsUser = false,
-                    Timestamp = DateTime.Now
-                });
                 var file = await _aiClient.DownloadFileAsync(gptResponse);
                 string savePath = Path.Combine("/root/ai-analyzer/ai_analyzer_code/documents", "documentation.md");
                 await System.IO.File.WriteAllBytesAsync(savePath, file);
