@@ -1,0 +1,335 @@
+﻿@page
+@model frontAIagent.Pages.ProjectChatModel
+@{
+    ViewData["Title"] = "Project Analysis - " + Model.Project.AnalysisName;
+}
+
+@Model.Project.DirectoryPath
+@Model.Project.FileType
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Левая панель - информация о проекте -->
+        <div class="col-lg-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-info-circle"></i> Project Information
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Project Name</label>
+                        <p class="form-control bg-light">@Model.Project.AnalysisName</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Directory Path</label>
+                        <p class="form-control bg-light">@Model.Project.DirectoryPath</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">File Type</label>
+                        <p class="form-control bg-light">
+                            <span class="badge
+                                @(Model.Project.FileType == ".py" ? "bg-warning text-dark" :
+                                                                    Model.Project.FileType == ".cs" ? "bg-info text-white" :
+                                                                    "bg-secondary text-white")">
+                                @Model.Project.FileType
+                            </span>
+                        </p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Program Description</label>
+                        <p class="form-control bg-light" style="min-height: 80px;">@Model.Project.ProgramDescription</p>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.Project.LogPath))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Log Path</label>
+                            <p class="form-control bg-light">@Model.Project.LogPath</p>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Last Analyzed</label>
+                        <p class="form-control bg-light">@Model.Project.LastAnalyzed.ToString("MMM dd, yyyy HH:mm")</p>
+                    </div>
+
+                    <div class="d-grid">
+                        <a href="/" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Projects
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card shadow mt-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightning"></i> Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="quickPrompt('Analyze code quality and suggest improvements')">
+                            <i class="bi bi-graph-up"></i> Code Quality
+                        </button>
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="quickPrompt('Check for security vulnerabilities')">
+                            <i class="bi bi-shield-check"></i> Security Scan
+                        </button>
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="quickPrompt('Optimize performance and identify bottlenecks')">
+                            <i class="bi bi-speedometer2"></i> Performance
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm" onclick="quickPrompt('Review architecture and design patterns')">
+                            <i class="bi bi-diagram-3"></i> Architecture
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Добавь этот блок после Quick Actions и перед правой панелью -->
+        @if (!string.IsNullOrEmpty(Model.SuccessMessage) || !string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="card shadow mt-4">
+                <div class="card-header @(string.IsNullOrEmpty(Model.ErrorMessage) ? "bg-success" : "bg-warning") text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-folder-check"></i> Project Files Status
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+                    {
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle"></i> @Model.SuccessMessage
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i> @Model.ErrorMessage
+                        </div>
+                    }
+
+                    @if (Model.FileContext != null)
+                    {
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">Total Files:</small>
+                                <div class="fw-bold">@Model.FileContext.TotalFiles</div>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">Successfully Read:</small>
+                                <div class="fw-bold text-success">@Model.FileContext.SuccessFiles</div>
+                            </div>
+                            @if (Model.FileContext.FailedFiles > 0)
+                            {
+                                <div class="col-md-6">
+                                    <small class="text-muted">Failed to Read:</small>
+                                    <div class="fw-bold text-danger">@Model.FileContext.FailedFiles</div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.ProjectStructure))
+        {
+            <div class="card shadow mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-diagram-3"></i> Project Structure
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <pre class="structure-output">@Model.ProjectStructure</pre>
+                </div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.FileContext?.CombinedContent))
+        {
+            <div class="card shadow mt-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-earmark-code"></i> Combined Files Content
+                        <span class="badge bg-light text-dark float-end">@Model.FileContext.SuccessFiles files</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        The following content combines all readable project files for AI analysis:
+                    </div>
+                    <pre class="files-output">@Model.FileContext.CombinedContent</pre>
+                </div>
+            </div>
+        }
+
+        <!-- Правая панель - чат с AI -->
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-robot"></i> AI Analysis Assistant
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- История чата -->
+                    <div id="chatHistory" class="chat-messages mb-3" style="height: 400px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 5px; padding: 15px;">
+                        @if (Model.ChatMessages.Any())
+                        {
+                            @foreach (var message in Model.ChatMessages)
+                            {
+                                <div class="message @(message.IsUser ? "user-message" : "ai-message") mb-3">
+                                    <div class="d-flex @(message.IsUser ? "justify-content-end" : "justify-content-start")">
+                                        <div class="@(message.IsUser ? "bg-primary text-white" : "bg-light") rounded p-3" style="max-width: 80%;">
+                                            <div class="fw-bold">@(message.IsUser ? "You" : "AI Assistant")</div>
+                                            <div>@message.Content</div>
+                                            <small class="d-block mt-1 @(message.IsUser ? "text-light" : "text-muted")">@message.Timestamp.ToString("HH:mm")</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center text-muted">
+                                <i class="bi bi-chat-dots display-4"></i>
+                                <p>Start a conversation with AI to analyze your project</p>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Форма ввода -->
+                   <form method="post" asp-page-handler="AskGpt" id="chatForm">
+                        <div class="input-group">
+                            <textarea class="form-control" name="userMessage" id="userMessage"
+                                      rows="3" placeholder="Ask GPT anything..." required>@Model.UserMessage</textarea>
+                            <button type="submit" class="btn btn-primary" id="sendButton">
+                                <i class="bi bi-robot"></i> Ask GPT
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Analysis Results -->
+            @if (!string.IsNullOrEmpty(Model.AnalysisResult))
+            {
+                <div class="card shadow mt-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-file-earmark-text"></i> Latest Analysis Result
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <pre class="analysis-output">@Model.AnalysisResult</pre>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function quickPrompt(promptText) {
+            document.getElementById('userMessage').value = promptText;
+            document.getElementById('userMessage').focus();
+        }
+
+        // Автофокус на поле ввода и прокрутка вниз
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('userMessage').focus();
+
+            const chatHistory = document.getElementById('chatHistory');
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        });
+
+        // Обработка отправки формы
+        document.getElementById('chatForm').addEventListener('submit', function(e) {
+            const sendButton = document.getElementById('sendButton');
+            const originalText = sendButton.innerHTML;
+
+            // Показываем индикатор загрузки
+            sendButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
+            sendButton.disabled = true;
+        });
+    </script>
+
+    <style>
+        .chat-messages {
+            background-color: #f8f9fa;
+        }
+
+        .user-message .bg-primary {
+            border-bottom-right-radius: 0;
+        }
+
+        .ai-message .bg-light {
+            border-bottom-left-radius: 0;
+            border: 1px solid #dee2e6;
+        }
+
+        .analysis-output {
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .form-control[readonly] {
+            background-color: #f8f9fa;
+            border: 1px solid #ced4da;
+        }
+
+        .structure-output {
+            white-space: pre-wrap;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85em;
+            line-height: 1.3;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+        }
+
+        .files-output {
+            white-space: pre-wrap;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.8em;
+            line-height: 1.2;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+        }
+
+        .analysis-output {
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+}
